@@ -9,7 +9,7 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.image = sprite
         self.rect = self.image.get_rect()
-        self.pos = vec(POLE_DISTANCE, WINDOW_HEIGHT // 4)
+        self.pos = vec(FLOPPY_START_X_COORD, WINDOW_HEIGHT // 4)
         self.rect.midbottom = self.pos
         self.ver_acc = GRAVITY
         self.ver_vel = 0
