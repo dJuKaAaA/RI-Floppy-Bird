@@ -256,7 +256,7 @@ class Game:
             for pole in self.poles:
                 if pole.rect.right <= 0:
                     pole.kill()
-                if pole.rect.left <= floppy.pos.x <= pole.rect.right:
+                if pole.rect.left - 1 <= floppy.pos.x <= pole.rect.right - 1:
                     if floppy.alive:
                         any_floppy_scored = True
                         self.beneath_pole = True
@@ -294,7 +294,7 @@ class Game:
         #         if self.floppy.alive:
         #             self.score += .5
 
-        while len(self.poles) < 6:
+        while len(self.poles) < MAX_VISIBLE_POLES * 2:
             POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
             width = self.get_furthest_pole(UpperPole).pos.x + POLE_DISTANCE
             p1 = UpperPole(width, 0, POLE_WIDTH, POLE_height)
