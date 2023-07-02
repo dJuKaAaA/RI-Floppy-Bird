@@ -6,8 +6,8 @@ path = os.path.abspath("")
 sys.path.append(path)
 from settings import *
 from sprites2 import *
-from pygame.surfarray import array3d, pixels_alpha
-from pygame import display, time, init, Rect
+
+
 
 class Game:
 
@@ -16,11 +16,11 @@ class Game:
         # initializes pygame and creates a game window
         pygame.init()
         self.win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        # pygame.display.set_caption(TITLE)
+        pygame.display.set_caption(TITLE)
         self.running = True
         self.clock = pygame.time.Clock()
         self.score = 0
-        self.reward = 0 # ima vrednosti 1 ako prode iymedju sipki, -1 ako umre a 0.1 ako samo zivi
+        self.reward = 0
 
         # loads the player sprites
         self.floppySprite = [pygame.image.load("Game_Assets/Floppy_Bird1.png").convert_alpha(),
@@ -29,14 +29,13 @@ class Game:
                              pygame.image.load("Game_Assets/Floppy_Bird4.png").convert_alpha()]
 
         # changes the game window icon
-        # pygame.display.set_icon(self.floppySprite[0])
+        pygame.display.set_icon(self.floppySprite[0])
 
         # animation settings
         self.anim_count = 0
         self.anim = True
 
     def events(self):
-        pass
         for event in pygame.event.get():
             if event.type == QUIT:
                 self.running = False
@@ -58,9 +57,13 @@ class Game:
         self.playing = True
         # while self.playing:
         self.clock.tick(FPS)
-        self.updateSprites()
-            # self.events()
-            # self.drawSprites()
+        img, reward, alive = self.updateSprites()
+        self.floppy.notDead = True
+        self.score = 0
+        self.floppy.anim = True
+        self.anim = True
+        self.drawSprites()
+        return img, reward, alive
 
     def newGame(self):
         self.all_sprites = pygame.sprite.Group()
@@ -79,7 +82,7 @@ class Game:
         self.floppy = Player(self)
         self.all_sprites.add(self.ground)
         self.all_sprites.add(self.floppy)
-        # self.run()
+        return self.run()
 
     def drawSprites(self):
         self.win.fill(VERYLIGHTBLUE)
@@ -89,14 +92,14 @@ class Game:
             self.showGameOverScreen()
             self.anim = False
 
-       
+        pygame.display.flip()
 
     def updateSprites(self, action=0):
         self.clock.tick(FPS)
         if action == 1:
             self.floppy.jump()
-
         self.reward = 0.1
+
         self.all_sprites.update()
         self.floppy.gravity()
         self.animate()
@@ -118,9 +121,9 @@ class Game:
                 self.floppy.pos.y = 32
                 pole.hor_vel = 0
                 self.floppy.notDead = False
-
+        
         if not self.floppy.notDead:
-            self.reward = -1
+            self.reward = -10
 
         # deletes and creates more poles based on their onscreen position also checks and changes the score
         for pole in self.poles:
@@ -138,9 +141,10 @@ class Game:
             self.poles.add(p2)
             self.all_sprites.add(p1)
             self.all_sprites.add(p2)
+        image = pygame.surfarray.array3d(pygame.display.get_surface())
+        # [self.floppy.pos.x, self.floppy.pos.y, 10, 12]
+        return [self.floppy.pos.x, self.floppy.pos.y, 10, 12], self.reward, self.floppy.notDead
 
-        image = array3d(display.get_surface())
-        return image, self.reward, self.floppy.notDead
 
     def showTitleScreen(self):
         self.win.fill(VERYLIGHTBLUE)
