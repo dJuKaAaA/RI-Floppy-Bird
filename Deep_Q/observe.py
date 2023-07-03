@@ -1,5 +1,5 @@
 import os, random
-import gym
+import pokusaj10
 import numpy as np
 import torch
 from torch import nn
@@ -7,16 +7,19 @@ import itertools
 import time
 
 import pickle
+from Deep_Q.game2 import skip_frames
+
+from game import Game
 
 class Network(nn.Module):
-    def __init__(self, env):
+    def __init__(self):
         super().__init__()
 
-        in_features = int(np.prod(env.observation_space.shape))
+        in_features = int(np.prod((4,)))
         self.net = nn.Sequential(
             nn.Linear(in_features, 64),
             nn.Tanh(),
-            nn.Linear(64, env.action_space.n)
+            nn.Linear(64, 2)
         )
 
     def forward(self, x):
@@ -46,24 +49,22 @@ class Network(nn.Module):
 
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # print('device:', device)
-env = gym.make("CartPole-v1")
+env = Game()
 episode_reward = 0.0
-net= Network(env)
+net= Network()
 
 net.load('./Deep_Q/saved_networks/v1')
 
-obs = env.reset()
+obs, _, _, _ = env.nextFrame(0)
 print(type(obs[0]))
 beginning_episode = True
 for t in itertools.count():
     while True:
-        if len(obs) ==2:
-            action = env.action_space.sample()
-        else:
+        skip_frames(env, pokusaj10.FRAMES_SKIPED)
 
-            action = net.act(obs)
+        action = net.act(obs)
 
-        obs, _, done, _, _ = env.step(action)
+        obs, _, done, _, _ = env.nextFrame(action)
         env.render()
         if done: 
             env.reset()

@@ -8,21 +8,23 @@ import itertools
 import numpy as np
 import random
 import pickle
+from game2 import Game, skip_frames
 
 GAMMA=0.99
 BATCH_SIZE=32
-BUFFER_SIZE=50000
-MIN_REPLAY_SIZE=1000
+BUFFER_SIZE=int(1e6)
+MIN_REPLAY_SIZE=50000
 EPSILON_START=1.0
-EPSILON_END=0.02
-EPSILON_DECAY=10000
-TARGET_UPDATE_FREQ=1000
-LEARNING_RATE = 5e-4
+EPSILON_END=0.1
+EPSILON_DECAY=int(1e6)
+TARGET_UPDATE_FREQ=10000
+LEARNING_RATE = 2.55e-4
 SAVE_INTERVAL = 10000
 SAVE_PATH = "./Deep_Q/saved_networks/v1"
 LOG_DIR = "./logs/flappy"
 LOG_INTERVAL = 1000
 ACTION_SPACE_N=2
+FRAMES_SKIPED=5
 
 class Network(nn.Module):
     def __init__(self):
@@ -63,9 +65,11 @@ class Network(nn.Module):
         
 
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-env = gym.make("CartPole-v1")
+# env = gym.make("CartPole-v1")
+env = Game()
 replay_buffer = deque(maxlen=BUFFER_SIZE)
 rew_buffer = deque([0,0], maxlen=100)
+score_buffer = deque([0,0], maxlen=100)
 episode_reward = 0.0
 summary_writer = SummaryWriter(LOG_DIR)
 online_net = Network()
@@ -74,31 +78,41 @@ target_net.load_state_dict(online_net.state_dict())
 optimizer = torch.optim.Adam(online_net.parameters(), lr=LEARNING_RATE)
 
 #inicijalizacija replay bufera
-obs = env.reset() #dovijamo prvu observaciju
+obs, _, _, _ = env.nextFrame(0) #dovijamo prvu observaciju
 for _ in range(MIN_REPLAY_SIZE):
-    action = env.action_space.sample()
-    new_obs, rew, done, _, _ = env.step(action)
+    action = random.randint(0, 2) 
+    if action == 2:
+        action = 0# namerno jedno vise kako bi manje skakao
+    skip_frames(env, FRAMES_SKIPED)
+    new_obs, rew, done, _= env.nextFrame(action)
     transition = (obs, action, rew, done, new_obs)
     
     replay_buffer.append(transition)
     obs = new_obs
     if done:
-        obs = env.reset()
-obs = env.reset()
+        env = Game()
+        obs, _, _, _ = env.nextFrame(0)
+        # obs = env.reset()
+# obs = env.reset()
+env = Game()
+obs, _, _, _ = env.nextFrame(0)
 for step in itertools.count(): # seksi while petlja
+    skip_frames(env, FRAMES_SKIPED)
     epsilon = np.interp(step, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])  # seksi smanjivanje epsilona
     rnd_sample = random.random()
     if rnd_sample <= epsilon or len(obs) == 2:
         action = random.randint(0, 1)
     else:
         action = online_net.act(obs)
-    new_obs, rew, done, _, _ = env.step(action)
+    new_obs, rew, done, _ = env.nextFrame(action)
     transition = (obs, action, rew, done, new_obs)
     replay_buffer.append(transition)
     obs = new_obs
     episode_reward += rew
     if done:
-        obs = env.reset()
+        # obs = env.reset()
+        env = Game()
+        obs, _, _, _ = env.nextFrame(0)
         rew_buffer.append(episode_reward)
         episode_reward = 0.0
     

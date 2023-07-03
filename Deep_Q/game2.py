@@ -1,3 +1,4 @@
+import math
 import pygame
 from pygame.locals import *
 import os
@@ -6,7 +7,7 @@ path = os.path.abspath("")
 sys.path.append(path)
 from settings import *
 from sprites2 import *
-
+import numpy as np
 
 
 class Game:
@@ -32,44 +33,19 @@ class Game:
         pygame.display.set_icon(self.floppySprite[0])
 
         # animation settings
+        self.floppy = Player(self)
         self.anim_count = 0
         self.anim = True
-
-    def events(self):
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                self.running = False
-                if self.playing:
-                    self.playing = False
-            if event.type == KEYDOWN:
-                if event.key == K_SPACE:
-                    if self.floppy.notDead:
-                        self.floppy.jump()
-                if self.floppy.notDead == False:
-                    if event.key == K_LSHIFT:
-                        self.playing = False
-                        self.floppy.notDead = True
-                        self.score = 0
-                        self.floppy.anim = True
-                        self.anim = True
-
-    def run(self):
         self.playing = True
-        # while self.playing:
-        self.clock.tick(FPS)
-        img, reward, alive = self.updateSprites()
-        self.floppy.notDead = True
+        self.floppy.alive = True
         self.score = 0
         self.floppy.anim = True
         self.anim = True
-        self.drawSprites()
-        return img, reward, alive
 
-    def newGame(self):
         self.all_sprites = pygame.sprite.Group()
         self.poles = pygame.sprite.Group()
         POLE_X = WINDOW_WIDTH
-        for i in range(3):
+        for _ in range(3):
             POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
             p1 = UpperPole(POLE_X, 0, 40, POLE_height)
             p2 = LowerPole(POLE_X, WINDOW_HEIGHT, 40, WINDOW_HEIGHT - POLE_height - POLE_GAP)
@@ -79,27 +55,60 @@ class Game:
             self.all_sprites.add(p2)
             POLE_X += POLE_DISTANCE
         self.ground = Ground(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 10, WINDOW_WIDTH, 20)
-        self.floppy = Player(self)
+        # self.floppy = Player(self)
         self.all_sprites.add(self.ground)
         self.all_sprites.add(self.floppy)
-        return self.run()
+
+    def events(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                self.running = False
+                if self.playing:
+                    self.playing = False
+            if event.type == KEYDOWN:
+                if event.key == K_SPACE:
+                    if self.floppy.alive:
+                        self.floppy.jump()
+                if self.floppy.alive == False:
+                    if event.key == K_LSHIFT:
+                        self.playing = False
+                        self.floppy.alive = True
+                        self.score = 0
+                        self.floppy.anim = True
+                        self.anim = True
+
+    def run(self, action):
+        self.playing = True
+        
+        self.clock.tick(FPS)
+        new_obs, rew, done, score = self.updateSprites(action)
+        self.events()
+        self.drawSprites()
+        return new_obs, rew, done, score
+
+    def newGame(self, action):
+        self.run(action)
+
+    def nextFrame(self, action):
+        self.clock.tick(FPS)
+        new_obs, rew, done, score = self.updateSprites(action)
+        self.drawSprites()
+        return new_obs, rew, done, score
 
     def drawSprites(self):
         self.win.fill(VERYLIGHTBLUE)
         self.all_sprites.draw(self.win)
         self.drawText(FONT, 48, str(round(self.score)), WINDOW_WIDTH // 2, WINDOW_HEIGHT // 8, (0, 0, 0))
-        if self.floppy.notDead == False:
+        if self.floppy.alive == False:
             self.showGameOverScreen()
             self.anim = False
 
         pygame.display.flip()
 
-    def updateSprites(self, action=0):
-        self.clock.tick(FPS)
-        if action == 1:
-            self.floppy.jump()
+    def updateSprites(self, action):
         self.reward = 0.1
-
+        if self.floppy.alive and action==1:
+            self.floppy.jump()
         self.all_sprites.update()
         self.floppy.gravity()
         self.animate()
@@ -111,26 +120,25 @@ class Game:
         for pole in self.poles:
             if hits:
                 pole.hor_vel = 0
-                self.floppy.notDead = False
+                self.floppy.alive = False
             if self.floppy.pos.y >= self.ground.rect.top:
                 self.floppy.pos.y = self.ground.rect.top
                 self.floppy.ver_vel = 0
                 pole.hor_vel = 0
-                self.floppy.notDead = False
+                self.floppy.alive = False
             if self.floppy.pos.y <= 32:
                 self.floppy.pos.y = 32
                 pole.hor_vel = 0
-                self.floppy.notDead = False
-        
-        if not self.floppy.notDead:
-            self.reward = -10
+                self.floppy.alive = False
+        if not self.floppy.alive:
+            self.reward = -1
 
         # deletes and creates more poles based on their onscreen position also checks and changes the score
         for pole in self.poles:
             if pole.rect.right <= 0:
                 pole.kill()
             if self.floppy.pos.x == pole.pos.x:
-                if self.floppy.notDead:
+                if self.floppy.alive:
                     self.score += .5
                     self.reward = 1
         while len(self.poles) < 6:
@@ -141,10 +149,8 @@ class Game:
             self.poles.add(p2)
             self.all_sprites.add(p1)
             self.all_sprites.add(p2)
-        image = pygame.surfarray.array3d(pygame.display.get_surface())
-        # [self.floppy.pos.x, self.floppy.pos.y, 10, 12]
-        return [self.floppy.pos.x, self.floppy.pos.y, 10, 12], self.reward, self.floppy.notDead
-
+        pole_x, pole_y = self.get_closest_pole()
+        return np.array([round(self.floppy.pos.x), round(self.floppy.pos.y), round(pole_x), round(pole_y)], dtype=np.float32), self.reward, not self.floppy.alive, self.score
 
     def showTitleScreen(self):
         self.win.fill(VERYLIGHTBLUE)
@@ -184,9 +190,77 @@ class Game:
             self.floppy.image = self.floppySprite[self.anim_count//4]
             self.anim_count += 1
 
+    def get_closest_pole(self):
+        closest_pole = None
+        closest_distance = math.inf
+        if self.floppy.alive:
+            for pole in self.poles:
+                if type(pole) == LowerPole and self.floppy.pos.x <= pole.pos.x:
+                    distance = pole.pos.x - self.floppy.pos.x
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_pole = pole
+        if closest_pole is None:
+            return 0, 0
+        return closest_pole.pos.x, closest_pole.height
+    
+def skip_frames(game, x):
+    for _ in range(x):
+        game.nextFrame(0)
 
 if __name__ == "__main__":
     game = Game()
-    game.showTitleScreen()
-    while game.running:
-        game.newGame()
+
+    #game.showTitleScreen()
+    # while game.floppy.alive:
+    # game.nextFrame(1)
+    # game.nextFrame(0)
+    # game.nextFrame(0)
+    # game.nextFrame(0)
+    # game.nextFrame(0)
+    # game.nextFrame(1)
+    # game.nextFrame(0)
+
+
+    # game = Game()
+    #game.showTitleScreen()
+    # while game.floppy.alive:
+    print(game.nextFrame(0))
+    skip_frames(game)
+    new_obs, rew, done, _ = game.nextFrame(0)
+    print(type(new_obs))
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(0)
+    skip_frames(game)
+    game.nextFrame(0)
+    skip_frames(game)
+    game.nextFrame(0)
+    skip_frames(game)
+    game.nextFrame(0)
+    skip_frames(game)
+    game.nextFrame(0)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+    game.nextFrame(1)
+    skip_frames(game)
+
+    # game = Game()
+    # #game.showTitleScreen()
+    # while game.running:
+    #     game.newGame(0)
+    
+        
+

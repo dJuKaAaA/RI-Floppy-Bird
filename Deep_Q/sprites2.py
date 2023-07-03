@@ -14,7 +14,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.midbottom = self.pos
         self.ver_acc = GRAVITY
         self.ver_vel = 0
-        self.notDead = True
+        self.alive = True
 
     def gravity(self):
         self.ver_acc = GRAVITY
@@ -59,6 +59,8 @@ class UpperPole(pygame.sprite.Sprite):
         self.pos = vec(x, y)
         self.rect.midtop = self.pos
         self.hor_vel = POLE_VEL
+        self.height = h
+
 
     def move(self):
         self.pos.x -= self.hor_vel
@@ -75,6 +77,8 @@ class LowerPole(pygame.sprite.Sprite):
         self.pos = vec(x, y)
         self.rect.midbottom = self.pos
         self.hor_vel = POLE_VEL
+        self.height = h
+
 
     def move(self):
         self.pos.x -= self.hor_vel
