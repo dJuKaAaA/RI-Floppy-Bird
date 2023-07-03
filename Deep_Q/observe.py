@@ -67,5 +67,6 @@ for t in itertools.count():
         obs, _, done, _, _ = env.nextFrame(action)
         env.render()
         if done: 
-            env.reset()
+            env = Game()
+            obs, _, _, _ = env.nextFrame(0)
             break

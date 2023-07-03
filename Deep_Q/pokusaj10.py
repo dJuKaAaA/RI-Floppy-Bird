@@ -104,7 +104,7 @@ for step in itertools.count(): # seksi while petlja
         action = random.randint(0, 1)
     else:
         action = online_net.act(obs)
-    new_obs, rew, done, _ = env.nextFrame(action)
+    new_obs, rew, done, scoree = env.nextFrame(action)
     transition = (obs, action, rew, done, new_obs)
     replay_buffer.append(transition)
     obs = new_obs
@@ -114,6 +114,7 @@ for step in itertools.count(): # seksi while petlja
         env = Game()
         obs, _, _, _ = env.nextFrame(0)
         rew_buffer.append(episode_reward)
+        score_buffer.append(scoree)
         episode_reward = 0.0
     
     #pocetak gradijentnog
@@ -167,8 +168,12 @@ for step in itertools.count(): # seksi while petlja
         print()
         print("Korak", step)
         avr = np.mean(rew_buffer)
+        avrsc = np.mean(score_buffer)
         print("Prosek nagrada", avr)
+        print("Prosek rezultata", avrsc)
+
         summary_writer.add_scalar("Prosecna nagrada", avr, global_step=step)
+        summary_writer.add_scalar("Prosecna ocena", avrsc, global_step=step)
 
     #cuvanje
     if step% SAVE_INTERVAL == 0 and step != 0:

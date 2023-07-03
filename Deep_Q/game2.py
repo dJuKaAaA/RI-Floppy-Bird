@@ -8,6 +8,7 @@ sys.path.append(path)
 from settings import *
 from sprites2 import *
 import numpy as np
+from pygame.surfarray import array3d, pixels_alpha
 
 
 class Game:
@@ -47,8 +48,8 @@ class Game:
         POLE_X = WINDOW_WIDTH
         for _ in range(3):
             POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
-            p1 = UpperPole(POLE_X, 0, 40, POLE_height)
-            p2 = LowerPole(POLE_X, WINDOW_HEIGHT, 40, WINDOW_HEIGHT - POLE_height - POLE_GAP)
+            p1 = UpperPole(POLE_X, 0, POLE_WIDTH, POLE_height)
+            p2 = LowerPole(POLE_X, WINDOW_HEIGHT, POLE_WIDTH, WINDOW_HEIGHT - POLE_height - POLE_GAP)
             self.poles.add(p1)
             self.poles.add(p2)
             self.all_sprites.add(p1)
@@ -65,30 +66,8 @@ class Game:
                 self.running = False
                 if self.playing:
                     self.playing = False
-            if event.type == KEYDOWN:
-                if event.key == K_SPACE:
-                    if self.floppy.alive:
-                        self.floppy.jump()
-                if self.floppy.alive == False:
-                    if event.key == K_LSHIFT:
-                        self.playing = False
-                        self.floppy.alive = True
-                        self.score = 0
-                        self.floppy.anim = True
-                        self.anim = True
 
-    def run(self, action):
-        self.playing = True
-        
-        self.clock.tick(FPS)
-        new_obs, rew, done, score = self.updateSprites(action)
-        self.events()
-        self.drawSprites()
-        return new_obs, rew, done, score
-
-    def newGame(self, action):
-        self.run(action)
-
+    
     def nextFrame(self, action):
         self.clock.tick(FPS)
         new_obs, rew, done, score = self.updateSprites(action)
@@ -150,6 +129,8 @@ class Game:
             self.all_sprites.add(p1)
             self.all_sprites.add(p2)
         pole_x, pole_y = self.get_closest_pole()
+        # image = array3d(pygame.display.get_surface())
+        # return image, self.reward, not self.floppy.alive, self.score
         return np.array([round(self.floppy.pos.x), round(self.floppy.pos.y), round(pole_x), round(pole_y)], dtype=np.float32), self.reward, not self.floppy.alive, self.score
 
     def showTitleScreen(self):
@@ -202,7 +183,7 @@ class Game:
                         closest_pole = pole
         if closest_pole is None:
             return 0, 0
-        return closest_pole.pos.x - self.floppy.pos.x, abs(closest_pole.height - self.floppy.pos.y)
+        return closest_pole.pos.x - self.floppy.pos.x, abs(closest_pole.rect.top - self.floppy.pos.y)
     
 def skip_frames(game, x):
     for _ in range(x):
