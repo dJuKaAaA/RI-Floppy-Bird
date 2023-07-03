@@ -202,60 +202,61 @@ class Game:
                         closest_pole = pole
         if closest_pole is None:
             return 0, 0
-        return closest_pole.pos.x, closest_pole.height
+        return closest_pole.pos.x - self.floppy.pos.x, abs(closest_pole.height - self.floppy.pos.y)
     
 def skip_frames(game, x):
     for _ in range(x):
         game.nextFrame(0)
 
 if __name__ == "__main__":
-    game = Game()
-
-    #game.showTitleScreen()
-    # while game.floppy.alive:
-    # game.nextFrame(1)
-    # game.nextFrame(0)
-    # game.nextFrame(0)
-    # game.nextFrame(0)
-    # game.nextFrame(0)
-    # game.nextFrame(1)
-    # game.nextFrame(0)
-
-
+    print(int(1e6))
     # game = Game()
-    #game.showTitleScreen()
-    # while game.floppy.alive:
+
+    # #game.showTitleScreen()
+    # # while game.floppy.alive:
+    # # game.nextFrame(1)
+    # # game.nextFrame(0)
+    # # game.nextFrame(0)
+    # # game.nextFrame(0)
+    # # game.nextFrame(0)
+    # # game.nextFrame(1)
+    # # game.nextFrame(0)
+
+
+    game = Game()
+    # #game.showTitleScreen()
+    # # while game.floppy.alive:
     print(game.nextFrame(0))
-    skip_frames(game)
+    skip_frames(game, 5)
     new_obs, rew, done, _ = game.nextFrame(0)
     print(type(new_obs))
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
+    skip_frames(game, 5)
+    print(game.nextFrame(1))
+    skip_frames(game, 5)
+    print(game.nextFrame(0))
+    skip_frames(game, 5)
+    print(game.nextFrame(0))
+    skip_frames(game, 5)
+    print(game.nextFrame(0))
+    skip_frames(game, 5)
     game.nextFrame(0)
-    skip_frames(game)
+    skip_frames(game, 5)
     game.nextFrame(0)
-    skip_frames(game)
-    game.nextFrame(0)
-    skip_frames(game)
-    game.nextFrame(0)
-    skip_frames(game)
-    game.nextFrame(0)
-    skip_frames(game)
+    skip_frames(game, 5)
     game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
-    game.nextFrame(1)
-    skip_frames(game)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
+    # game.nextFrame(1)
+    # skip_frames(game)
 
     # game = Game()
     # #game.showTitleScreen()
