@@ -1,10 +1,13 @@
+import os
 from torch import nn
 import torch
+from torch.utils.tensorboard import SummaryWriter
 import gym
 from collections import deque
 import itertools
 import numpy as np
 import random
+import pickle
 
 GAMMA=0.99
 BATCH_SIZE=32
@@ -15,17 +18,21 @@ EPSILON_END=0.02
 EPSILON_DECAY=10000
 TARGET_UPDATE_FREQ=1000
 LEARNING_RATE = 5e-4
-NUM_ENV = 4
+SAVE_INTERVAL = 10000
+SAVE_PATH = "./Deep_Q/saved_networks/v1"
+LOG_DIR = "./logs/flappy"
+LOG_INTERVAL = 1000
+ACTION_SPACE_N=2
 
 class Network(nn.Module):
-    def __init__(self, env):
+    def __init__(self):
         super().__init__()
 
-        in_features = int(np.prod(env.observation_space.shape))
+        in_features = int(np.prod((4,)))
         self.net = nn.Sequential(
             nn.Linear(in_features, 64),
             nn.Tanh(),
-            nn.Linear(64, env.action_space.n)
+            nn.Linear(64, ACTION_SPACE_N)
         )
 
     def forward(self, x):
@@ -37,14 +44,32 @@ class Network(nn.Module):
         max_q_index = torch.argmax(q_values, dim = 1)[0]
         action = max_q_index.detach().item()
         return action
+    
+    def save(self, save_path):
+        params = {k: t.detach().cpu().numpy() for k, t in self.state_dict().items()}
+        # params = self.state_dict().items()
+        with open(save_path, "wb") as f:
+            pickle.dump(params, f)
+    
+    def load(self, load_path):
+        if not os.path.exists(load_path):
+            raise FileNotFoundError(load_path)
+        
+        with open(load_path, "rb") as f:
+            params_numpy = pickle.load(f)
+        params = {k: torch.from_numpy(v) for k, v, in params_numpy.items()}
+        self.load_state_dict(params)
+        
+        
 
-
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 env = gym.make("CartPole-v1")
 replay_buffer = deque(maxlen=BUFFER_SIZE)
 rew_buffer = deque([0,0], maxlen=100)
 episode_reward = 0.0
-online_net = Network(env)
-target_net = Network(env)
+summary_writer = SummaryWriter(LOG_DIR)
+online_net = Network()
+target_net = Network()
 target_net.load_state_dict(online_net.state_dict())
 optimizer = torch.optim.Adam(online_net.parameters(), lr=LEARNING_RATE)
 
@@ -64,8 +89,7 @@ for step in itertools.count(): # seksi while petlja
     epsilon = np.interp(step, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])  # seksi smanjivanje epsilona
     rnd_sample = random.random()
     if rnd_sample <= epsilon or len(obs) == 2:
-        a = random.randint(0, 1)
-        action = env.action_space.sample()
+        action = random.randint(0, 1)
     else:
         action = online_net.act(obs)
     new_obs, rew, done, _, _ = env.step(action)
@@ -125,7 +149,14 @@ for step in itertools.count(): # seksi while petlja
         target_net.load_state_dict(online_net.state_dict())
 
     #logovi
-    if step % 1000 == 0:
+    if step % LOG_INTERVAL == 0:
         print()
         print("Korak", step)
-        print("Prosek nagrada", np.mean(rew_buffer))
+        avr = np.mean(rew_buffer)
+        print("Prosek nagrada", avr)
+        summary_writer.add_scalar("Prosecna nagrada", avr, global_step=step)
+
+    #cuvanje
+    if step% SAVE_INTERVAL == 0 and step != 0:
+        print("Savinig shbdaskhdxbk")
+        online_net.save(SAVE_PATH)
