@@ -30,6 +30,17 @@ class Game:
         self.nets = None
         self.ge = None
 
+        # debug is on
+        self.debug = True
+
+        # for scoring after passing a pole
+        self.beneath_pole = False
+        self.floppy_scored = False
+
+        # poles
+        self.closest_lower_pole = None
+        self.closest_upper_pole = None
+
         # loads the player sprites
         self.floppySprites = [pygame.image.load("Game_Assets/Floppy_Bird1.png").convert_alpha(),
                               pygame.image.load("Game_Assets/Floppy_Bird2.png").convert_alpha(),
@@ -59,7 +70,8 @@ class Game:
                 if self.playing:
                     self.playing = False
             if event.type == KEYDOWN:
-                pass
+                if event.key == K_d:
+                    self.debug = not self.debug
                 # for floppy in self.floppies:
                 #     if event.key == K_SPACE:
                 #         if floppy.alive:
@@ -89,9 +101,9 @@ class Game:
         self.poles = pygame.sprite.Group()
         POLE_X = WINDOW_WIDTH
         for _ in range(3):
-            POLE_height = randrange(0, WINDOW_HEIGHT - POLE_PROLAZ)
-            p1 = UpperPole(POLE_X, 0, 40, POLE_height)
-            p2 = LowerPole(POLE_X, WINDOW_HEIGHT, 40, WINDOW_HEIGHT - POLE_height - POLE_PROLAZ)
+            POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
+            p1 = UpperPole(POLE_X, 0, POLE_WIDTH, POLE_height)
+            p2 = LowerPole(POLE_X, WINDOW_HEIGHT, POLE_WIDTH, WINDOW_HEIGHT - POLE_height - POLE_GAP)
             self.poles.add(p1)
             self.poles.add(p2)
             self.all_sprites.add(p1)
@@ -110,7 +122,7 @@ class Game:
             all_dead = all_dead and not floppy.alive
         return all_dead
 
-    def get_closest_pole(self, pole_type):
+    def get_closest_next_pole(self, pole_type):
         floppy = None
         for f in self.floppies:
             if f.alive:
@@ -123,17 +135,63 @@ class Game:
             for pole in self.poles:
                 if (type(pole) == pole_type):
                     if floppy.pos.x < pole.pos.x:
-                        distance = pole.pos.x - floppy.pos.x
+                        distance = abs(pole.pos.x - floppy.pos.x)
                         if distance < closest_distance:
                             closest_distance = distance
                             closest_pole = pole
 
         return closest_pole
 
+    def get_closest_pole(self, pole_type):
+        floppy = None
+        for f in self.floppies:
+            if f.alive:
+                floppy = f
+                break
+
+        closest_pole = None
+        closest_distance = math.inf
+        if floppy is not None:
+            for pole in self.poles:
+                if (type(pole) == pole_type):
+                    distance = abs(pole.pos.x - floppy.pos.x)
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_pole = pole
+
+        return closest_pole
+
+    def get_furthest_pole(self, pole_type):
+        floppy = None
+        for f in self.floppies:
+            if f.alive:
+                floppy = f
+                break
+
+        furthest_pole = None
+        furthest_distance = -math.inf
+        for pole in self.poles:
+            if (type(pole) == pole_type):
+                distance = abs(pole.pos.x - floppy.pos.x)
+                if distance > furthest_distance:
+                    furthest_distance = distance
+                    furthest_pole = pole
+
+        return furthest_pole
+    
+    def get_any_alive_floppy_fitness(self):
+        for i, floppy in enumerate(self.floppies):
+            if floppy.alive:
+                return self.ge[i].fitness
+        return -1
+
     def drawSprites(self):
         self.win.fill(VERYLIGHTBLUE)
         self.all_sprites.draw(self.win)
         self.drawText(FONT, 48, str(round(self.score)), WINDOW_WIDTH // 2, WINDOW_HEIGHT // 8, (0, 0, 0))
+        if self.debug:
+            self.drawText(FONT, 24, f"Lower pole: {self.closest_lower_pole.rect.top}; Upper pole: {self.closest_upper_pole.rect.bottom}", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 8 + 50, (0, 0, 0))
+            self.drawText(FONT, 24, f"Fitness: {self.get_any_alive_floppy_fitness(): .2f}", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 8 + 100, (0, 0, 0))
 
         if self.are_all_dead():
             # for floppy in self.floppies:
@@ -156,21 +214,26 @@ class Game:
         for pole in self.poles:
             pole.move()
 
+        floppy_passed = False
         any_floppy_scored = False
         for i, floppy in enumerate(self.floppies):
             floppy.gravity()
             if floppy.alive:
                 self.ge[i].fitness += MOVING_REWARD
-                closest_upper_pole = self.get_closest_pole(UpperPole)
-                closest_lower_pole = self.get_closest_pole(LowerPole)
-                output = self.nets[i].activate((floppy.pos.y, abs(floppy.pos.y - closest_upper_pole.rect.bottom), abs(floppy.pos.y - closest_lower_pole.rect.top)))
+                self.closest_upper_pole = self.get_closest_next_pole(UpperPole)
+                self.closest_lower_pole = self.get_closest_next_pole(LowerPole)
+                output = self.nets[i].activate((floppy.pos.y, abs(floppy.pos.y - self.closest_upper_pole.rect.bottom), abs(floppy.pos.y - self.closest_lower_pole.rect.top)))
 
                 if output[0] > 0.5:
                     floppy.jump()
 
+                if self.get_closest_pole(UpperPole).rect.right < floppy.pos.x:
+                    self.beneath_pole = False
+                    self.floppy_scored = False
+
             hits = pygame.sprite.spritecollide(floppy, self.poles, False)
+            floppy_collided = False
             for pole in self.poles:
-                floppy_collided = False
                 if hits:
                     floppy_collided = True
                 if floppy.pos.y >= self.ground.rect.top:
@@ -181,25 +244,30 @@ class Game:
                     floppy.pos.y = 32
                     floppy_collided = True
 
-                if floppy_collided:
-                    self.ge[i].fitness -= DEATH_PENALTY 
-                    floppy.alive = False
-                    self.all_sprites.remove(floppy)
-                    # self.floppies.pop(i)
-                    # self.ge.pop(i)
-                    # self.nets.pop(i)
+            if floppy_collided:
+                self.ge[i].fitness -= DEATH_PENALTY 
+                floppy.alive = False
+                self.all_sprites.remove(floppy)
+                # self.floppies.pop(i)
+                # self.ge.pop(i)
+                # self.nets.pop(i)
 
             # deletes and creates more poles based on their onscreen position also checks and changes the score
             for pole in self.poles:
                 if pole.rect.right <= 0:
                     pole.kill()
-                if floppy.pos.x == pole.pos.x:
+                if pole.rect.left - 1 <= floppy.pos.x <= pole.rect.right - 1:
                     if floppy.alive:
                         any_floppy_scored = True
-                        self.ge[i].fitness += PASSING_POLE_REWARD
+                        self.beneath_pole = True
 
-        if any_floppy_scored:
+            if not self.floppy_scored and self.beneath_pole:
+                self.ge[i].fitness += PASSING_POLE_REWARD
+
+        if any_floppy_scored and not self.floppy_scored and self.beneath_pole:
             self.score += 1
+            self.floppy_scored = True
+
         # self.floppy.gravity()
 
         # detects collision between the player and game objects
@@ -226,10 +294,11 @@ class Game:
         #         if self.floppy.alive:
         #             self.score += .5
 
-        while len(self.poles) < 6:
-            POLE_height = randrange(0, WINDOW_HEIGHT - POLE_PROLAZ)
-            p1 = UpperPole(WINDOW_WIDTH + 20, 0, 40, POLE_height)
-            p2 = LowerPole(WINDOW_WIDTH + 20, WINDOW_HEIGHT, 40, WINDOW_HEIGHT - POLE_height - POLE_PROLAZ)
+        while len(self.poles) < MAX_VISIBLE_POLES * 2:
+            POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
+            width = self.get_furthest_pole(UpperPole).pos.x + POLE_DISTANCE
+            p1 = UpperPole(width, 0, POLE_WIDTH, POLE_height)
+            p2 = LowerPole(width, WINDOW_HEIGHT, POLE_WIDTH, WINDOW_HEIGHT - POLE_height - POLE_GAP)
             self.poles.add(p1)
             self.poles.add(p2)
             self.all_sprites.add(p1)
@@ -314,7 +383,7 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
      
-    winner = p.run(main, 100)
+    winner = p.run(main, 1000)
 
 
 if __name__ == "__main__":

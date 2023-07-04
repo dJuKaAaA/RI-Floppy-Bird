@@ -5,15 +5,15 @@ vec = pygame.math.Vector2
 
 class Player(pygame.sprite.Sprite):
 
-    def __init__(self, sprite):
+    def __init__(self, game):
         pygame.sprite.Sprite.__init__(self)
-        self.image = sprite
+        self.game = game
+        self.image = self.game.floppySprite[0]
         self.rect = self.image.get_rect()
-        self.pos = vec(FLOPPY_START_X_COORD, WINDOW_HEIGHT // 4)
+        self.pos = vec(POLE_DISTANCE, WINDOW_HEIGHT // 4)
         self.rect.midbottom = self.pos
         self.ver_acc = GRAVITY
         self.ver_vel = 0
-        self.anim_count = 0
         self.alive = True
 
     def gravity(self):
@@ -59,6 +59,8 @@ class UpperPole(pygame.sprite.Sprite):
         self.pos = vec(x, y)
         self.rect.midtop = self.pos
         self.hor_vel = POLE_VEL
+        self.height = h
+
 
     def move(self):
         self.pos.x -= self.hor_vel
@@ -75,6 +77,8 @@ class LowerPole(pygame.sprite.Sprite):
         self.pos = vec(x, y)
         self.rect.midbottom = self.pos
         self.hor_vel = POLE_VEL
+        self.height = h
+
 
     def move(self):
         self.pos.x -= self.hor_vel
