@@ -13,7 +13,7 @@ from game2 import Game, skip_frames
 GAMMA=0.99
 BATCH_SIZE=32
 BUFFER_SIZE=int(1e6)
-MIN_REPLAY_SIZE=10000
+MIN_REPLAY_SIZE=20000
 EPSILON_START=1.0
 EPSILON_END=0.1
 EPSILON_DECAY=int(1e6)
@@ -83,8 +83,8 @@ for _ in range(MIN_REPLAY_SIZE):
     action = random.randint(0, 2) 
     if action == 2:
         action = 0# namerno jedno vise kako bi manje skakao
-    skip_frames(env, FRAMES_SKIPED)
-    new_obs, rew, done, _= env.nextFrame(action)
+    env.nextFrame(action)
+    new_obs, rew, done, _= skip_frames(env, FRAMES_SKIPED)
     transition = (obs, action, rew, done, new_obs)
     
     replay_buffer.append(transition)
@@ -97,14 +97,14 @@ for _ in range(MIN_REPLAY_SIZE):
 env = Game()
 obs, _, _, _ = env.nextFrame(0)
 for step in itertools.count(): # seksi while petlja
-    skip_frames(env, FRAMES_SKIPED)
     epsilon = np.interp(step, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])  # seksi smanjivanje epsilona
     rnd_sample = random.random()
     if rnd_sample <= epsilon or len(obs) == 2:
         action = random.randint(0, 1)
     else:
         action = online_net.act(obs)
-    new_obs, rew, done, scoree = env.nextFrame(action)
+    env.nextFrame(action)
+    new_obs, rew, done, scoree = skip_frames(env, FRAMES_SKIPED)
     transition = (obs, action, rew, done, new_obs)
     replay_buffer.append(transition)
     obs = new_obs

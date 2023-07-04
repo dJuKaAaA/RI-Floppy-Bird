@@ -60,11 +60,12 @@ print(type(obs[0]))
 beginning_episode = True
 for t in itertools.count():
     while True:
-        skip_frames(env, pokusaj10.FRAMES_SKIPED)
 
         action = net.act(obs)
 
-        obs, _, done, _, _ = env.nextFrame(action)
+        env.nextFrame(action)
+        obs, _, done, _, _ = skip_frames(env, pokusaj10.FRAMES_SKIPED)
+
         env.render()
         if done: 
             env = Game()

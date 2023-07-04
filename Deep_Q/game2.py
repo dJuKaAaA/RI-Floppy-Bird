@@ -183,11 +183,12 @@ class Game:
                         closest_pole = pole
         if closest_pole is None:
             return 0, 0
-        return closest_pole.pos.x - self.floppy.pos.x, abs(closest_pole.rect.top - self.floppy.pos.y)
+        return closest_pole.pos.x - self.floppy.pos.x, closest_pole.rect.top - self.floppy.pos.y
     
 def skip_frames(game, x):
     for _ in range(x):
-        game.nextFrame(0)
+        new_obs, rew, done, score = game.nextFrame(0)
+    return new_obs, rew, done, score
 
 if __name__ == "__main__":
     print(int(1e6))
