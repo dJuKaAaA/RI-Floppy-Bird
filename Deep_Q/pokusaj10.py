@@ -12,13 +12,13 @@ from game2 import Game, skip_frames
 
 GAMMA=0.99
 BATCH_SIZE=32
-BUFFER_SIZE=int(1e6)
-MIN_REPLAY_SIZE=20000
+BUFFER_SIZE=50000
+MIN_REPLAY_SIZE=1000
 EPSILON_START=1.0
 EPSILON_END=0.1
-EPSILON_DECAY=int(1e6)
-TARGET_UPDATE_FREQ=10000
-LEARNING_RATE = 2.55e-4
+EPSILON_DECAY=10000
+TARGET_UPDATE_FREQ=1000
+LEARNING_RATE = 1e-4 #5
 SAVE_INTERVAL = 10000
 SAVE_PATH = "./Deep_Q/saved_networks/v1"
 LOG_DIR = "./logs/flappy"
@@ -92,12 +92,10 @@ for _ in range(MIN_REPLAY_SIZE):
     if done:
         env = Game()
         obs, _, _, _ = env.nextFrame(0)
-        # obs = env.reset()
-# obs = env.reset()
 env = Game()
 obs, _, _, _ = env.nextFrame(0)
-for step in itertools.count(): # seksi while petlja
-    epsilon = np.interp(step, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])  # seksi smanjivanje epsilona
+for step in itertools.count(): #  while petlja
+    epsilon = np.interp(step, [0, EPSILON_DECAY], [EPSILON_START, EPSILON_END])  #  smanjivanje epsilona
     rnd_sample = random.random()
     if rnd_sample <= epsilon or len(obs) == 2:
         action = random.randint(0, 1)
@@ -110,7 +108,6 @@ for step in itertools.count(): # seksi while petlja
     obs = new_obs
     episode_reward += rew
     if done:
-        # obs = env.reset()
         env = Game()
         obs, _, _, _ = env.nextFrame(0)
         rew_buffer.append(episode_reward)
