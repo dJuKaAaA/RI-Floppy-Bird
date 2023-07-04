@@ -122,8 +122,8 @@ class Game:
                     self.reward = 1
         while len(self.poles) < 6:
             POLE_height = randrange(0, WINDOW_HEIGHT - POLE_GAP)
-            p1 = UpperPole(WINDOW_WIDTH + 20, 0, 40, POLE_height)
-            p2 = LowerPole(WINDOW_WIDTH + 20, WINDOW_HEIGHT, 40, WINDOW_HEIGHT - POLE_height - POLE_GAP)
+            p1 = UpperPole(WINDOW_WIDTH + 20, 0, POLE_WIDTH, POLE_height)
+            p2 = LowerPole(WINDOW_WIDTH + 20, WINDOW_HEIGHT, POLE_WIDTH, WINDOW_HEIGHT - POLE_height - POLE_GAP)
             self.poles.add(p1)
             self.poles.add(p2)
             self.all_sprites.add(p1)
