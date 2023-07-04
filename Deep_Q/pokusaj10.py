@@ -15,7 +15,7 @@ BATCH_SIZE=32
 BUFFER_SIZE=50000
 MIN_REPLAY_SIZE=1000
 EPSILON_START=1.0
-EPSILON_END=0.1
+EPSILON_END=0.01
 EPSILON_DECAY=10000
 TARGET_UPDATE_FREQ=1000
 LEARNING_RATE = 1e-4 #5
@@ -68,8 +68,8 @@ class Network(nn.Module):
 # env = gym.make("CartPole-v1")
 env = Game()
 replay_buffer = deque(maxlen=BUFFER_SIZE)
-rew_buffer = deque([0,0], maxlen=100)
-score_buffer = deque([0,0], maxlen=100)
+rew_buffer = deque([0.0], maxlen=100)
+score_buffer = deque([0.0], maxlen=100)
 episode_reward = 0.0
 summary_writer = SummaryWriter(LOG_DIR)
 online_net = Network()
